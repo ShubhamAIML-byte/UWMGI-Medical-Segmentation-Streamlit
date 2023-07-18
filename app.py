@@ -84,18 +84,15 @@ if __name__ == "__main__":
 
     # with gr.Blocks(title="Medical Image Segmentation") as demo:
     #     gr.Markdown("""<h1><center>Medical Image Segmentation with UW-Madison GI Tract Dataset</center></h1>""")
-
     #     with gr.Row():
     #         img_input = gr.Image(type="pil", height=300, width=300, label="Input image")
     #         img_output = gr.AnnotatedImage(label="Predictions", height=300, width=300, color_map=class2hexcolor)
 
     #     section_btn = gr.Button("Generate Predictions")
-
     #     section_btn.click(partial(predict, model=model, preprocess_fn=preprocess, device=DEVICE), img_input, img_output)
 
     #     images_dir = glob(os.path.join(os.getcwd(), "samples") + os.sep + "*.png")
     #     examples = [i for i in np.random.choice(images_dir, size=8, replace=False)]
-
     #     gr.Examples(examples=examples, inputs=img_input, outputs=img_output)
 
     demo.launch()
