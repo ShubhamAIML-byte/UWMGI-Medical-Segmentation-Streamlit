@@ -44,14 +44,6 @@ def predict(input_image, model=None, preprocess_fn=None, device="cpu"):
 
 
 if __name__ == "__main__":
-    # Create a mapping of class ID to RGB value.
-    id2color = {
-        0: (0, 0, 0),  # background pixel
-        1: (0, 0, 255),  # Stomach
-        2: (0, 255, 0),  # Small bowel
-        3: (255, 0, 0),  # large bowel
-    }
-
     class2hexcolor = {"Stomach": "#007fff", "Small bowel": "#009A17", "Large bowel": "#FF0000"}
 
     DEVICE = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
@@ -72,29 +64,29 @@ if __name__ == "__main__":
         ]
     )
 
-    # images_dir = glob(os.path.join(os.getcwd(), "samples") + os.sep + "*.png")
-    # examples = [i for i in np.random.choice(images_dir, size=8, replace=False)]
-    # demo = gr.Interface(
-    #     fn=partial(predict, model=model, preprocess_fn=preprocess, device=DEVICE),
-    #     inputs=gr.Image(type="pil", height=300, width=300, label="Input image"),
-    #     outputs=gr.AnnotatedImage(label="Predictions", height=300, width=300, color_map=class2hexcolor),
-    #     examples=examples,
-    #     cache_examples=False,
-    #     allow_flagging="never",
-    #     title="Medical Image Segmentation with UW-Madison GI Tract Dataset",
-    # )
+    images_dir = glob(os.path.join(os.getcwd(), "samples") + os.sep + "*.png")
+    examples = [i for i in np.random.choice(images_dir, size=8, replace=False)]
+    demo = gr.Interface(
+        fn=partial(predict, model=model, preprocess_fn=preprocess, device=DEVICE),
+        inputs=gr.Image(type="pil", height=300, width=300, label="Input image"),
+        outputs=gr.AnnotatedImage(label="Predictions", height=300, width=300, color_map=class2hexcolor),
+        examples=examples,
+        cache_examples=False,
+        allow_flagging="never",
+        title="Medical Image Segmentation with UW-Madison GI Tract Dataset",
+    )
 
-    with gr.Blocks(title="Medical Image Segmentation") as demo:
-        gr.Markdown("""<h1><center>Medical Image Segmentation with UW-Madison GI Tract Dataset</center></h1>""")
-        with gr.Row():
-            img_input = gr.Image(type="pil", height=300, width=300, label="Input image")
-            img_output = gr.AnnotatedImage(label="Predictions", height=300, width=300, color_map=class2hexcolor)
+    # with gr.Blocks(title="Medical Image Segmentation") as demo:
+    #     gr.Markdown("""<h1><center>Medical Image Segmentation with UW-Madison GI Tract Dataset</center></h1>""")
+    #     with gr.Row():
+    #         img_input = gr.Image(type="pil", height=300, width=300, label="Input image")
+    #         img_output = gr.AnnotatedImage(label="Predictions", height=300, width=300, color_map=class2hexcolor)
 
-        section_btn = gr.Button("Generate Predictions")
-        section_btn.click(partial(predict, model=model, preprocess_fn=preprocess, device=DEVICE), img_input, img_output)
+    #     section_btn = gr.Button("Generate Predictions")
+    #     section_btn.click(partial(predict, model=model, preprocess_fn=preprocess, device=DEVICE), img_input, img_output)
 
-        images_dir = glob(os.path.join(os.getcwd(), "samples") + os.sep + "*.png")
-        examples = [i for i in np.random.choice(images_dir, size=8, replace=False)]
-        gr.Examples(examples=examples, inputs=img_input, outputs=img_output)
+    #     images_dir = glob(os.path.join(os.getcwd(), "samples") + os.sep + "*.png")
+    #     examples = [i for i in np.random.choice(images_dir, size=8, replace=False)]
+    #     gr.Examples(examples=examples, inputs=img_input, outputs=img_output)
 
     demo.launch()
