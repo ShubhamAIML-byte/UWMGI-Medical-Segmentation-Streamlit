@@ -5,9 +5,8 @@ colorFrom: gray
 colorTo: indigo
 sdk: gradio
 sdk_version: 3.37.0
-app_file: run.py
+app_file: app.py
 pinned: false
-
 ---
 
 # Medical Image Segmentation Gradio App
