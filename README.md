@@ -1,14 +1,14 @@
 ---
 title: Medical Image Segmentation Gradio App
-emoji: 🌖
+emoji: 🏥🩺
 colorFrom: gray
 colorTo: indigo
 sdk: gradio
-sdk_version: 3.36.1
-app_file: app.py
+sdk_version: 3.37.0
+app_file: run.py
 pinned: false
----
 
+---
 
 # Medical Image Segmentation Gradio App
 
