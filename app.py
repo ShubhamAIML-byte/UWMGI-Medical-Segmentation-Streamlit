@@ -71,7 +71,7 @@ if __name__ == "__main__":
         section_btn.click(partial(predict, model=model, preprocess_fn=preprocess, device=DEVICE), img_input, img_output)
 
         images_dir = glob(os.path.join(os.getcwd(), "samples") + os.sep + "*.png")
-        examples = [i for i in np.random.choice(images_dir, size=8, replace=False)]
+        examples = [i for i in np.random.choice(images_dir, size=10, replace=False)]
         gr.Examples(examples=examples, inputs=img_input, outputs=img_output)
 
     demo.launch()
