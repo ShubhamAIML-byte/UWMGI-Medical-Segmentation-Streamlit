@@ -1,17 +1,19 @@
 import os
 import numpy as np
 import streamlit as st
-from PIL import Image
 
 import torch
 import torch.nn.functional as F
 import torchvision.transforms as TF
+
 from transformers import SegformerForSemanticSegmentation
+from huggingface_hub import snapshot_download
 
 
-# -----------------------------
-# Configuration
-# -----------------------------
+# =========================================================
+# CONFIGURATION
+# =========================================================
+
 NUM_CLASSES = 4
 
 CLASSES = (
@@ -25,8 +27,15 @@ IMAGE_SIZE = (288, 288)
 MEAN = (0.485, 0.456, 0.406)
 STD = (0.229, 0.224, 0.225)
 
-MODEL_PATH = os.path.join(
+HF_REPO_ID = "veb-101/UWMGI_Medical_Image_Segmentation"
+
+MODEL_ROOT = os.path.join(
     os.getcwd(),
+    ".hf_model"
+)
+
+MODEL_PATH = os.path.join(
+    MODEL_ROOT,
     "segformer_trained_weights"
 )
 
@@ -35,9 +44,10 @@ DEVICE = torch.device(
 )
 
 
-# -----------------------------
-# Page configuration
-# -----------------------------
+# =========================================================
+# STREAMLIT PAGE
+# =========================================================
+
 st.set_page_config(
     page_title="Medical Image Segmentation",
     page_icon="🩺",
@@ -45,17 +55,64 @@ st.set_page_config(
 )
 
 st.title("🩺 Medical Image Segmentation")
-st.subheader("UW-Madison GI Tract Dataset")
+
+st.write(
+    "UW-Madison GI Tract Dataset — SegFormer"
+)
 
 
-# -----------------------------
-# Load model
-# -----------------------------
+# =========================================================
+# DOWNLOAD MODEL FROM HUGGING FACE
+# =========================================================
+
+@st.cache_resource
+def download_model():
+
+    model_file = os.path.join(
+        MODEL_PATH,
+        "pytorch_model.bin"
+    )
+
+    config_file = os.path.join(
+        MODEL_PATH,
+        "config.json"
+    )
+
+    # If model is already available locally,
+    # don't download it again.
+    if not (
+        os.path.exists(model_file)
+        and os.path.exists(config_file)
+    ):
+
+        st.info(
+            "Downloading SegFormer model from Hugging Face..."
+        )
+
+        snapshot_download(
+            repo_id=HF_REPO_ID,
+            repo_type="space",
+            allow_patterns=[
+                "segformer_trained_weights/config.json",
+                "segformer_trained_weights/pytorch_model.bin",
+            ],
+            local_dir=MODEL_ROOT,
+        )
+
+    return MODEL_PATH
+
+
+# =========================================================
+# LOAD MODEL
+# =========================================================
+
 @st.cache_resource
 def load_model():
 
+    model_path = download_model()
+
     model = SegformerForSemanticSegmentation.from_pretrained(
-        MODEL_PATH,
+        model_path,
         num_labels=NUM_CLASSES,
         ignore_mismatched_sizes=True
     )
@@ -69,29 +126,42 @@ def load_model():
 model = load_model()
 
 
-# -----------------------------
-# Preprocessing
-# -----------------------------
+# =========================================================
+# PREPROCESSING
+# =========================================================
+
 preprocess = TF.Compose(
     [
-        TF.Resize(IMAGE_SIZE[::-1]),
+        TF.Resize(
+            size=IMAGE_SIZE[::-1]
+        ),
         TF.ToTensor(),
-        TF.Normalize(MEAN, STD),
+        TF.Normalize(
+            MEAN,
+            STD
+        ),
     ]
 )
 
 
-# -----------------------------
-# Prediction
-# -----------------------------
+# =========================================================
+# PREDICTION
+# =========================================================
+
 @torch.inference_mode()
 def predict(input_image):
 
-    original_size = input_image.size
+    original_width, original_height = input_image.size
 
-    input_tensor = preprocess(input_image)
+    input_tensor = preprocess(
+        input_image
+    )
 
-    input_tensor = input_tensor.unsqueeze(0).to(DEVICE)
+    input_tensor = input_tensor.unsqueeze(0)
+
+    input_tensor = input_tensor.to(
+        DEVICE
+    )
 
     outputs = model(
         pixel_values=input_tensor,
@@ -100,59 +170,80 @@ def predict(input_image):
 
     predictions = F.interpolate(
         outputs["logits"],
-        size=(original_size[1], original_size[0]),
+        size=(
+            original_height,
+            original_width
+        ),
         mode="bilinear",
         align_corners=False
     )
 
-    prediction = predictions.argmax(
+    mask = predictions.argmax(
         dim=1
     ).cpu().squeeze().numpy()
 
-    return prediction
+    return mask
 
 
-# -----------------------------
-# Create segmentation overlay
-# -----------------------------
+# =========================================================
+# CREATE OVERLAY
+# =========================================================
+
 def create_overlay(image, mask):
 
-    image_array = np.array(image).copy()
+    image_array = np.array(
+        image
+    ).copy()
 
     overlay = image_array.copy()
 
     colors = {
-        1: (255, 0, 0),      # Large bowel
-        2: (0, 154, 23),     # Small bowel
-        3: (0, 127, 255),    # Stomach
+        1: (255, 0, 0),       # Large bowel
+        2: (0, 154, 23),      # Small bowel
+        3: (0, 127, 255),     # Stomach
     }
 
     for class_id, color in colors.items():
 
         region = mask == class_id
 
-        overlay[region] = (
-            0.5 * overlay[region]
-            + 0.5 * np.array(color)
-        ).astype(np.uint8)
+        if np.any(region):
 
-    return Image.fromarray(overlay)
+            overlay[region] = (
+                0.5 * overlay[region]
+                + 0.5 * np.array(color)
+            ).astype(np.uint8)
+
+    return overlay
 
 
-# -----------------------------
-# Upload image
-# -----------------------------
+# =========================================================
+# IMAGE UPLOAD
+# =========================================================
+
 uploaded_file = st.file_uploader(
     "Upload a medical image",
-    type=["png", "jpg", "jpeg"]
+    type=[
+        "png",
+        "jpg",
+        "jpeg"
+    ]
 )
 
 
+# =========================================================
+# PROCESS IMAGE
+# =========================================================
+
 if uploaded_file is not None:
 
-    image = Image.open(uploaded_file).convert("RGB")
+    from PIL import Image
 
-    st.write("### Input Image")
+    image = Image.open(
+        uploaded_file
+    ).convert("RGB")
+
+    st.subheader("Input Image")
 
     col1, col2 = st.columns(2)
 
@@ -164,17 +255,18 @@ if uploaded_file is not None:
             use_container_width=True
         )
 
-    # -------------------------
-    # Predict
-    # -------------------------
     if st.button(
         "🔍 Generate Segmentation",
         type="primary"
     ):
 
-        with st.spinner("Running SegFormer..."):
+        with st.spinner(
+            "Running SegFormer..."
+        ):
 
-            mask = predict(image)
+            mask = predict(
+                image
+            )
 
             result = create_overlay(
                 image,
@@ -189,10 +281,9 @@ if uploaded_file is not None:
                 use_container_width=True
             )
 
-        # -------------------------
-        # Detection information
-        # -------------------------
-        st.write("### Detected Structures")
+        st.subheader(
+            "Detected Structures"
+        )
 
         detected = []
 
@@ -201,9 +292,13 @@ if uploaded_file is not None:
             start=1
         ):
 
-            if np.any(mask == class_id):
+            if np.any(
+                mask == class_id
+            ):
 
-                detected.append(class_name)
+                detected.append(
+                    class_name
+                )
 
         if detected:
 
@@ -220,19 +315,22 @@ if uploaded_file is not None:
             )
 
 
-# -----------------------------
-# Sidebar
-# -----------------------------
+# =========================================================
+# SIDEBAR
+# =========================================================
+
 with st.sidebar:
 
-    st.header("Model Information")
+    st.header(
+        "Model Information"
+    )
 
     st.write(
         "**Model:** SegFormer"
     )
 
     st.write(
-        "**Input size:** 288 × 288"
+        "**Input:** 288 × 288"
     )
 
     st.write(
