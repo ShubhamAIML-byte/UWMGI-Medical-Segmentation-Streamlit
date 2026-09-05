@@ -1,4 +1,7 @@
---find-links https://download.pytorch.org/whl/torch_stable.html
 torch==2.0.0+cpu
 torchvision==0.15.0
-transformers==4.30.2streamlit
+transformers==4.30.2
+streamlit
+huggingface-hub
+numpy==1.26.4
+Pillow
