@@ -9,7 +9,8 @@ app_file: app.py
 pinned: false
 ---
 
-# Medical Image Segmentation Gradio App
+# Medical Image Segmentation Streamlit
+https://uwmgi-medical-segmentation-app-xobiny95pajznzqxcgdwuy.streamlit.app/
 
 For the Gradio app we've removed the dependency on pytorch-lightning otherwise used in the project.
 The `load_lightning_SD_to_Usual_SD.ipynb` notebook contains the steps used to convert pytorch-lightning checkpoint to a regular model checkpoint. This was mainly done to reduce the file size (977 MB --> 244 MB).
